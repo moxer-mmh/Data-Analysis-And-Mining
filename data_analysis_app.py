@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QGroupBox, QGridLayout, QFrame, QListWidget,
     QAbstractItemView, QSpinBox, QDoubleSpinBox, QFormLayout,
     QCheckBox, QGraphicsDropShadowEffect, QScrollArea, QSizePolicy,
-    QStackedWidget, QProgressBar
+    QStackedWidget, QProgressBar, QHeaderView
 )
 from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer, QSize
 from PyQt6.QtGui import QFont, QColor, QPalette, QLinearGradient, QBrush, QIcon, QPainter
@@ -163,21 +163,22 @@ class NavButton(QPushButton):
     """Navigation tab button"""
     def __init__(self, text, icon_text="", parent=None):
         super().__init__(parent)
-        self.setText(f"{icon_text}\n{text}" if icon_text else text)
+        self.setText(text)
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setMinimumHeight(70)
-        self.setMinimumWidth(90)
+        self.setMinimumHeight(50)
+        self.setMinimumWidth(180)
         self.setStyleSheet(f"""
             QPushButton {{
                 background-color: transparent;
                 color: {COLORS['text_muted']};
                 border: none;
                 border-radius: 12px;
-                padding: 12px 8px;
-                font-size: 11px;
-                font-weight: 500;
-                font-family: 'Segoe UI', sans-serif;
+                padding: 16px 24px;
+                font-size: 15px;
+                font-weight: 600;
+                font-family: 'Segoe UI', 'SF Pro Display', sans-serif;
+                text-align: left;
             }}
             QPushButton:hover {{
                 background-color: {COLORS['bg_elevated']};
@@ -444,7 +445,7 @@ class DataAnalysisApp(QMainWindow):
         # SIDEBAR NAVIGATION
         # ═══════════════════════════════════════════════════════════════════════
         sidebar = QFrame()
-        sidebar.setFixedWidth(100)
+        sidebar.setFixedWidth(220)
         sidebar.setStyleSheet(f"""
             QFrame {{
                 background-color: {COLORS['bg_card']};
@@ -452,45 +453,41 @@ class DataAnalysisApp(QMainWindow):
             }}
         """)
         sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(8, 16, 8, 16)
-        sidebar_layout.setSpacing(8)
+        sidebar_layout.setContentsMargins(16, 24, 16, 24)
+        sidebar_layout.setSpacing(12)
 
-        # Logo
-        logo_label = QLabel("◈")
-        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo_label.setStyleSheet(f"""
-            font-size: 32px;
-            color: {COLORS['accent_primary']};
-            padding: 16px 0;
+        # Title
+        title_label = QLabel("Data Analysis")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        title_label.setStyleSheet(f"""
+            font-size: 20px;
+            font-weight: 700;
+            color: {COLORS['text_primary']};
+            padding: 0 8px 24px 8px;
+            font-family: 'Segoe UI', 'SF Pro Display', sans-serif;
         """)
-        sidebar_layout.addWidget(logo_label)
+        sidebar_layout.addWidget(title_label)
 
         # Navigation buttons
         self.nav_buttons = []
         nav_items = [
-            ("📊", "Data"),
-            ("📈", "Stats"),
-            ("📉", "Charts"),
-            ("⚙️", "Process"),
-            ("🔍", "Filter"),
-            ("🎯", "Cluster"),
-            ("🤖", "Classify"),
+            "Data",
+            "Statistics",
+            "Charts",
+            "Preprocessing",
+            "Filtering",
+            "Clustering",
+            "Classification",
         ]
 
-        for icon, text in nav_items:
-            btn = NavButton(text, icon)
+        for text in nav_items:
+            btn = NavButton(text)
             btn.clicked.connect(lambda checked, t=text: self.switch_page(t))
             self.nav_buttons.append(btn)
             sidebar_layout.addWidget(btn)
 
         self.nav_buttons[0].setChecked(True)
         sidebar_layout.addStretch()
-
-        # Theme indicator
-        theme_label = QLabel("🌙")
-        theme_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        theme_label.setStyleSheet("font-size: 20px; padding: 16px 0;")
-        sidebar_layout.addWidget(theme_label)
 
         main_layout.addWidget(sidebar)
 
@@ -587,12 +584,12 @@ class DataAnalysisApp(QMainWindow):
 
     def switch_page(self, page_name):
         page_map = {
-            "Data": 0, "Stats": 1, "Charts": 2, "Process": 3,
-            "Filter": 4, "Cluster": 5, "Classify": 6
+            "Data": 0, "Statistics": 1, "Charts": 2, "Preprocessing": 3,
+            "Filtering": 4, "Clustering": 5, "Classification": 6
         }
         idx = page_map.get(page_name, 0)
         self.pages.setCurrentIndex(idx)
-        
+
         for i, btn in enumerate(self.nav_buttons):
             btn.setChecked(i == idx)
 
@@ -709,14 +706,14 @@ class DataAnalysisApp(QMainWindow):
         sidebar_layout.addWidget(type_label)
         
         self.plot_type_combo = QComboBox()
-        self.plot_type_combo.addItems(["Histogram", "Scatter Plot", "Box Plot", "Line Plot", "Correlation Heatmap"])
+        self.plot_type_combo.addItems(["Histogram", "Scatter Plot", "Box Plot", "Line Plot", "Correlation Heatmap", "Elbow Curve"])
         self.plot_type_combo.currentTextChanged.connect(self.update_plot_controls)
         sidebar_layout.addWidget(self.plot_type_combo)
 
         # X axis
-        x_label = QLabel("X Axis")
-        x_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-weight: 500; margin-top: 8px;")
-        sidebar_layout.addWidget(x_label)
+        self.x_label = QLabel("X Axis")
+        self.x_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-weight: 500; margin-top: 8px;")
+        sidebar_layout.addWidget(self.x_label)
         self.x_column_combo = QComboBox()
         sidebar_layout.addWidget(self.x_column_combo)
 
@@ -1209,7 +1206,14 @@ class DataAnalysisApp(QMainWindow):
                 item = QTableWidgetItem(str(df.iloc[i, j]))
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 table.setItem(i, j, item)
+
+        # Resize columns to contents first, then stretch to fill remaining space
         table.resizeColumnsToContents()
+        header = table.horizontalHeader()
+        header.setStretchLastSection(True)
+        # Set all columns to stretch proportionally
+        for i in range(len(df.columns)):
+            header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
 
     def display_filtered_data(self):
         if self.filtered_df is None:
@@ -1293,9 +1297,15 @@ class DataAnalysisApp(QMainWindow):
     def update_plot_controls(self):
         ptype = self.plot_type_combo.currentText()
         needs_y = "Scatter" in ptype or "Line" in ptype
-        self.y_column_combo.setEnabled(needs_y)
+        needs_x = "Elbow" not in ptype and "Heatmap" not in ptype
+
+        self.x_label.setVisible(needs_x)
+        self.x_column_combo.setEnabled(needs_x)
+        self.x_column_combo.setVisible(needs_x)
+
         self.y_label.setVisible(needs_y)
-        self.y_column_combo.setVisible(needs_y or "Heatmap" not in ptype)
+        self.y_column_combo.setEnabled(needs_y)
+        self.y_column_combo.setVisible(needs_y)
 
     def generate_plot(self):
         if self.filtered_df is None:
@@ -1361,6 +1371,37 @@ class DataAnalysisApp(QMainWindow):
                 ax.set_yticklabels(num_cols, fontsize=9)
                 self.figure.colorbar(im, ax=ax)
                 ax.set_title("Correlation Heatmap", fontsize=14, fontweight='bold')
+
+            elif "Elbow" in ptype:
+                # Get numeric columns for clustering
+                num_cols = self.filtered_df.select_dtypes(include=[np.number]).columns
+                if len(num_cols) == 0:
+                    self.show_error("Error", "No numeric columns available for clustering")
+                    return
+
+                X = self.filtered_df[num_cols].dropna().values
+
+                # Calculate inertia for different k values
+                k_range = range(1, 11)
+                inertias = []
+
+                for k in k_range:
+                    kmeans = KMeans(k=k, max_iters=100)
+                    kmeans.fit(X)
+                    # Calculate inertia (sum of squared distances to closest centroid)
+                    distances = np.min(np.linalg.norm(X[:, np.newaxis] - kmeans.centroids, axis=2), axis=1)
+                    inertia = np.sum(distances ** 2)
+                    inertias.append(inertia)
+
+                # Plot elbow curve
+                ax.plot(k_range, inertias, marker='o', color=COLORS['accent_primary'],
+                       linewidth=2.5, markersize=8, markerfacecolor=COLORS['accent_secondary'],
+                       markeredgecolor='white', markeredgewidth=2)
+                ax.set_xlabel("Number of Clusters (K)", fontweight='600')
+                ax.set_ylabel("Inertia (Within-Cluster Sum of Squares)", fontweight='600')
+                ax.set_title("Elbow Method for Optimal K", fontsize=14, fontweight='bold')
+                ax.grid(True, alpha=0.3, color=COLORS['border'], linestyle='--')
+                ax.set_xticks(k_range)
 
             self.figure.tight_layout()
             self.canvas.draw()
