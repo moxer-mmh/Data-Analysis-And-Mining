@@ -35,6 +35,19 @@ class KMeans:
             
         return self.labels
 
+    def inertia_(self, X):
+        """Calculate Within-Cluster Sum of Squares (WCSS) / Inertia"""
+        if self.centroids is None or self.labels is None:
+            return None
+        
+        X = np.array(X)
+        inertia = 0.0
+        for i in range(self.k):
+            cluster_points = X[self.labels == i]
+            if len(cluster_points) > 0:
+                inertia += np.sum((cluster_points - self.centroids[i]) ** 2)
+        return inertia
+
     def _calc_distances(self, X, centroids):
         return np.linalg.norm(X[:, np.newaxis] - centroids, axis=2)
 

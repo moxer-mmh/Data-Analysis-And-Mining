@@ -163,7 +163,7 @@ class NavButton(QPushButton):
     """Navigation tab button"""
     def __init__(self, text, icon_text="", parent=None):
         super().__init__(parent)
-        self.setText(f"{icon_text}\n{text}" if icon_text else text)
+        self.setText(text)
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumHeight(70)
@@ -175,7 +175,7 @@ class NavButton(QPushButton):
                 border: none;
                 border-radius: 12px;
                 padding: 12px 8px;
-                font-size: 11px;
+                font-size: 14px;
                 font-weight: 500;
                 font-family: 'Segoe UI', sans-serif;
             }}
@@ -209,11 +209,8 @@ class StatCard(QFrame):
         layout.setSpacing(8)
         
         header = QHBoxLayout()
-        icon_label = QLabel(icon)
-        icon_label.setStyleSheet(f"font-size: 20px; color: {color};")
         title_label = QLabel(title)
-        title_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 12px; font-weight: 500;")
-        header.addWidget(icon_label)
+        title_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 15px; font-weight: 500;")
         header.addWidget(title_label)
         header.addStretch()
         
@@ -468,17 +465,17 @@ class DataAnalysisApp(QMainWindow):
         # Navigation buttons
         self.nav_buttons = []
         nav_items = [
-            ("📊", "Data"),
-            ("📈", "Stats"),
-            ("📉", "Charts"),
-            ("⚙️", "Process"),
-            ("🔍", "Filter"),
-            ("🎯", "Cluster"),
-            ("🤖", "Classify"),
+            "Data",
+            "Stats",
+            "Charts",
+            "Process",
+            "Filter",
+            "Cluster",
+            "Classify",
         ]
 
-        for icon, text in nav_items:
-            btn = NavButton(text, icon)
+        for text in nav_items:
+            btn = NavButton(text)
             btn.clicked.connect(lambda checked, t=text: self.switch_page(t))
             self.nav_buttons.append(btn)
             sidebar_layout.addWidget(btn)
@@ -606,10 +603,10 @@ class DataAnalysisApp(QMainWindow):
         stats_row = QHBoxLayout()
         stats_row.setSpacing(16)
         
-        self.rows_card = StatCard("Rows", "—", "📊", COLORS['accent_primary'])
-        self.cols_card = StatCard("Columns", "—", "📋", COLORS['accent_secondary'])
-        self.missing_card = StatCard("Missing", "—", "⚠️", COLORS['accent_warning'])
-        self.numeric_card = StatCard("Numeric", "—", "🔢", COLORS['accent_success'])
+        self.rows_card = StatCard("Rows", "—")
+        self.cols_card = StatCard("Columns", "—")
+        self.missing_card = StatCard("Missing", "—")
+        self.numeric_card = StatCard("Numeric", "—")
         
         stats_row.addWidget(self.rows_card)
         stats_row.addWidget(self.cols_card)
@@ -623,13 +620,13 @@ class DataAnalysisApp(QMainWindow):
         table_layout.setContentsMargins(20, 20, 20, 20)
         
         table_header = QHBoxLayout()
-        table_title = QLabel("📊  Data Preview")
-        table_title.setStyleSheet(f"font-size: 16px; font-weight: 600; color: {COLORS['text_primary']};")
+        table_title = QLabel("Data Preview")
+        table_title.setStyleSheet(f"font-size: 20px; font-weight: 600; color: {COLORS['text_primary']};")
         table_header.addWidget(table_title)
         table_header.addStretch()
         
         self.preview_info = QLabel("Showing first 100 rows")
-        self.preview_info.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 12px;")
+        self.preview_info.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 14px;")
         table_header.addWidget(self.preview_info)
         table_layout.addLayout(table_header)
 
@@ -699,7 +696,7 @@ class DataAnalysisApp(QMainWindow):
         sidebar_layout.setContentsMargins(20, 20, 20, 20)
         sidebar_layout.setSpacing(16)
 
-        sidebar_title = QLabel("⚙️  Chart Settings")
+        sidebar_title = QLabel("Chart Settings")
         sidebar_title.setStyleSheet(f"font-size: 15px; font-weight: 600; color: {COLORS['text_primary']};")
         sidebar_layout.addWidget(sidebar_title)
 
@@ -709,7 +706,16 @@ class DataAnalysisApp(QMainWindow):
         sidebar_layout.addWidget(type_label)
         
         self.plot_type_combo = QComboBox()
-        self.plot_type_combo.addItems(["Histogram", "Scatter Plot", "Box Plot", "Line Plot", "Correlation Heatmap"])
+        self.plot_type_combo.addItems([
+            "Histogram", 
+            "Scatter Plot", 
+            "Box Plot", 
+            "Line Plot", 
+            "Bar Chart",
+            "Violin Plot",
+            "Density Plot",
+            "Correlation Heatmap"
+        ])
         self.plot_type_combo.currentTextChanged.connect(self.update_plot_controls)
         sidebar_layout.addWidget(self.plot_type_combo)
 
@@ -908,7 +914,7 @@ class DataAnalysisApp(QMainWindow):
         sidebar_layout.setContentsMargins(20, 20, 20, 20)
         sidebar_layout.setSpacing(12)
 
-        sidebar_title = QLabel("🎯  Clustering")
+        sidebar_title = QLabel("Clustering")
         sidebar_title.setStyleSheet(f"font-size: 15px; font-weight: 600; color: {COLORS['text_primary']};")
         sidebar_layout.addWidget(sidebar_title)
 
@@ -964,6 +970,12 @@ class DataAnalysisApp(QMainWindow):
 
         sidebar_layout.addWidget(params_frame)
 
+        # Elbow method checkbox (only for K-Means)
+        self.elbow_checkbox = QCheckBox("Find optimal k (Elbow Method)")
+        self.elbow_checkbox.setStyleSheet(f"color: {COLORS['text_secondary']};")
+        self.elbow_checkbox.setToolTip("Automatically determine optimal number of clusters using Elbow Method")
+        sidebar_layout.addWidget(self.elbow_checkbox)
+
         # Features
         feat_label = QLabel("Features (2+)")
         feat_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-weight: 500; margin-top: 8px;")
@@ -976,6 +988,12 @@ class DataAnalysisApp(QMainWindow):
 
         sidebar_layout.addStretch()
 
+        # Elbow method button
+        self.elbow_btn = SecondaryButton("Find Optimal k")
+        self.elbow_btn.clicked.connect(self.run_elbow_method)
+        self.elbow_btn.setToolTip("Run Elbow Method to find optimal number of clusters")
+        sidebar_layout.addWidget(self.elbow_btn)
+
         run_btn = AccentButton("Run Clustering", "▶️")
         run_btn.clicked.connect(self.run_clustering)
         sidebar_layout.addWidget(run_btn)
@@ -987,7 +1005,7 @@ class DataAnalysisApp(QMainWindow):
         chart_layout = QVBoxLayout(chart_card)
         chart_layout.setContentsMargins(20, 20, 20, 20)
 
-        chart_title = QLabel("📊  Cluster Visualization")
+        chart_title = QLabel("Cluster Visualization")
         chart_title.setStyleSheet(f"font-size: 16px; font-weight: 600; color: {COLORS['text_primary']}; margin-bottom: 12px;")
         chart_layout.addWidget(chart_title)
 
@@ -1129,18 +1147,23 @@ class DataAnalysisApp(QMainWindow):
 
     def update_cluster_params(self):
         algo = self.cluster_algo_combo.currentText()
-        is_kmeans = "K-Means" in algo or "K-Medoids" in algo or "DIANA" in algo
+        is_kmeans = "K-Means" in algo
+        is_kmeans_or_medoids = "K-Means" in algo or "K-Medoids" in algo or "DIANA" in algo
         is_agnes = "AGNES" in algo
         is_dbscan = "DBSCAN" in algo
 
-        self.k_label.setVisible(is_kmeans or is_agnes)
-        self.k_spin.setVisible(is_kmeans or is_agnes)
+        self.k_label.setVisible(is_kmeans_or_medoids or is_agnes)
+        self.k_spin.setVisible(is_kmeans_or_medoids or is_agnes)
         self.linkage_label.setVisible(is_agnes)
         self.linkage_combo.setVisible(is_agnes)
         self.eps_label.setVisible(is_dbscan)
         self.eps_spin.setVisible(is_dbscan)
         self.min_samples_label.setVisible(is_dbscan)
         self.min_samples_spin.setVisible(is_dbscan)
+        
+        # Elbow method only for K-Means
+        self.elbow_checkbox.setVisible(is_kmeans)
+        self.elbow_btn.setVisible(is_kmeans)
 
     def update_classification_params(self):
         algo = self.class_algo_combo.currentText()
@@ -1292,17 +1315,40 @@ class DataAnalysisApp(QMainWindow):
 
     def update_plot_controls(self):
         ptype = self.plot_type_combo.currentText()
-        needs_y = "Scatter" in ptype or "Line" in ptype
+        needs_y = "Scatter" in ptype or "Line" in ptype or "Bar" in ptype
         self.y_column_combo.setEnabled(needs_y)
         self.y_label.setVisible(needs_y)
-        self.y_column_combo.setVisible(needs_y or "Heatmap" not in ptype)
+        self.y_column_combo.setVisible(needs_y or "Heatmap" not in ptype or "Density" not in ptype)
+
+    def _safe_convert_to_numeric(self, series):
+        """Safely convert a pandas series to numeric, handling errors"""
+        try:
+            # Try direct conversion
+            result = pd.to_numeric(series, errors='coerce')
+            if result.isna().all():
+                # If all NaN, try converting strings to numeric
+                result = pd.to_numeric(series.astype(str).str.replace(',', '').str.replace(' ', ''), errors='coerce')
+            # Ensure we return a numeric type that numpy can handle
+            return result.astype(np.float64, errors='ignore')
+        except Exception:
+            try:
+                result = pd.to_numeric(series, errors='coerce')
+                return result.astype(np.float64, errors='ignore')
+            except Exception:
+                # Last resort: return as-is if conversion completely fails
+                return series
 
     def generate_plot(self):
         if self.filtered_df is None:
+            self.show_error("Warning", "No data loaded. Please load a dataset first.")
             return
+        
         ptype = self.plot_type_combo.currentText()
         x_col = self.x_column_combo.currentText()
-        y_col = self.y_column_combo.currentText()
+        
+        if not x_col:
+            self.show_error("Warning", "Please select an X-axis column.")
+            return
 
         self.figure.clear()
         ax = self.figure.add_subplot(111)
@@ -1320,52 +1366,230 @@ class DataAnalysisApp(QMainWindow):
         ax.title.set_color(COLORS['text_primary'])
 
         try:
+            # Extract and convert data safely
+            x_data = self.filtered_df[x_col].dropna()
+            
+            # For numeric plots, convert to numeric
+            if ptype in ["Histogram", "Box Plot", "Density Plot"] or "Scatter" in ptype or "Line" in ptype:
+                x_data = self._safe_convert_to_numeric(x_data)
+                x_data = x_data.dropna()
+                
+                if len(x_data) == 0:
+                    self.show_error("Error", f"Column '{x_col}' cannot be converted to numeric values.")
+                    return
+
             if "Histogram" in ptype:
-                ax.hist(self.filtered_df[x_col].dropna(), bins=30, 
+                if not pd.api.types.is_numeric_dtype(x_data):
+                    x_data = self._safe_convert_to_numeric(x_data).dropna()
+                ax.hist(x_data, bins=30, 
                        color=COLORS['accent_primary'], edgecolor=COLORS['bg_card'], alpha=0.8)
                 ax.set_title(f"Distribution of {x_col}", fontsize=14, fontweight='bold')
                 ax.set_xlabel(x_col)
                 ax.set_ylabel("Frequency")
+                ax.grid(True, alpha=0.2, color=COLORS['border'])
 
             elif "Scatter" in ptype:
-                scatter = ax.scatter(self.filtered_df[x_col], self.filtered_df[y_col], 
+                y_col = self.y_column_combo.currentText()
+                if not y_col:
+                    self.show_error("Warning", "Please select a Y-axis column for scatter plot.")
+                    return
+                
+                y_data = self.filtered_df[y_col].dropna()
+                x_data_clean = self.filtered_df[x_col].dropna()
+                y_data_clean = y_data.copy()
+                
+                # Convert both to numeric
+                x_data_clean = self._safe_convert_to_numeric(x_data_clean).dropna()
+                y_data_clean = self._safe_convert_to_numeric(y_data_clean).dropna()
+                
+                # Align indices
+                common_idx = x_data_clean.index.intersection(y_data_clean.index)
+                x_data_clean = x_data_clean.loc[common_idx]
+                y_data_clean = y_data_clean.loc[common_idx]
+                
+                if len(x_data_clean) == 0 or len(y_data_clean) == 0:
+                    self.show_error("Error", "Cannot create scatter plot: insufficient numeric data.")
+                    return
+                
+                scatter = ax.scatter(x_data_clean, y_data_clean, 
                                    alpha=0.6, c=COLORS['accent_secondary'], s=50, edgecolors='white', linewidth=0.5)
                 ax.set_xlabel(x_col)
                 ax.set_ylabel(y_col)
                 ax.set_title(f"{y_col} vs {x_col}", fontsize=14, fontweight='bold')
+                ax.grid(True, alpha=0.2, color=COLORS['border'])
 
             elif "Box" in ptype:
-                bp = ax.boxplot(self.filtered_df[x_col].dropna(), labels=[x_col], patch_artist=True)
+                if not pd.api.types.is_numeric_dtype(x_data):
+                    x_data = self._safe_convert_to_numeric(x_data).dropna()
+                bp = ax.boxplot([x_data], labels=[x_col], patch_artist=True)
                 bp['boxes'][0].set_facecolor(COLORS['accent_primary'])
                 bp['boxes'][0].set_alpha(0.7)
                 for element in ['whiskers', 'caps', 'medians']:
                     for item in bp[element]:
                         item.set_color(COLORS['accent_secondary'])
                 ax.set_title(f"Box Plot of {x_col}", fontsize=14, fontweight='bold')
+                ax.grid(True, alpha=0.2, color=COLORS['border'], axis='y')
 
             elif "Line" in ptype:
-                ax.plot(self.filtered_df[x_col], self.filtered_df[y_col], 
+                y_col = self.y_column_combo.currentText()
+                if not y_col:
+                    self.show_error("Warning", "Please select a Y-axis column for line plot.")
+                    return
+                
+                y_data = self.filtered_df[y_col].dropna()
+                x_data_clean = self.filtered_df[x_col].dropna()
+                y_data_clean = y_data.copy()
+                
+                # Convert both to numeric
+                x_data_clean = self._safe_convert_to_numeric(x_data_clean).dropna()
+                y_data_clean = self._safe_convert_to_numeric(y_data_clean).dropna()
+                
+                # Align indices and sort by x
+                common_idx = x_data_clean.index.intersection(y_data_clean.index)
+                x_data_clean = x_data_clean.loc[common_idx].sort_values()
+                y_data_clean = y_data_clean.loc[x_data_clean.index]
+                
+                if len(x_data_clean) == 0 or len(y_data_clean) == 0:
+                    self.show_error("Error", "Cannot create line plot: insufficient numeric data.")
+                    return
+                
+                ax.plot(x_data_clean, y_data_clean, 
                        marker='o', color=COLORS['accent_primary'], linewidth=2, markersize=4, alpha=0.8)
                 ax.set_xlabel(x_col)
                 ax.set_ylabel(y_col)
                 ax.set_title(f"{y_col} over {x_col}", fontsize=14, fontweight='bold')
                 ax.grid(True, alpha=0.3, color=COLORS['border'])
 
+            elif "Bar" in ptype:
+                y_col = self.y_column_combo.currentText()
+                if not y_col:
+                    self.show_error("Warning", "Please select a Y-axis column for bar chart.")
+                    return
+                
+                # For bar charts, x can be categorical
+                x_data = self.filtered_df[x_col].dropna()
+                y_data = self._safe_convert_to_numeric(self.filtered_df[y_col]).dropna()
+                
+                # Align indices
+                common_idx = x_data.index.intersection(y_data.index)
+                x_data = x_data.loc[common_idx]
+                y_data = y_data.loc[common_idx]
+                
+                if len(x_data) == 0 or len(y_data) == 0:
+                    self.show_error("Error", "Cannot create bar chart: insufficient data.")
+                    return
+                
+                # If x is categorical or has many unique values, take first 50
+                if len(x_data.unique()) > 50:
+                    x_data = x_data.head(50)
+                    y_data = y_data.head(50)
+                
+                ax.bar(range(len(x_data)), y_data, 
+                      color=COLORS['accent_primary'], alpha=0.8, edgecolor=COLORS['bg_card'])
+                ax.set_xticks(range(len(x_data)))
+                ax.set_xticklabels(x_data.astype(str), rotation=45, ha='right', fontsize=9)
+                ax.set_xlabel(x_col)
+                ax.set_ylabel(y_col)
+                ax.set_title(f"{y_col} by {x_col}", fontsize=14, fontweight='bold')
+                ax.grid(True, alpha=0.2, color=COLORS['border'], axis='y')
+
+            elif "Violin" in ptype:
+                if not pd.api.types.is_numeric_dtype(x_data):
+                    x_data = self._safe_convert_to_numeric(x_data).dropna()
+                
+                try:
+                    # Try to use seaborn-style violin plot with matplotlib
+                    parts = ax.violinplot([x_data], positions=[1], showmeans=True, showmedians=True)
+                    for pc in parts['bodies']:
+                        pc.set_facecolor(COLORS['accent_primary'])
+                        pc.set_alpha(0.7)
+                    parts['cmeans'].set_color(COLORS['accent_secondary'])
+                    parts['cmedians'].set_color(COLORS['accent_warning'])
+                    ax.set_xticks([1])
+                    ax.set_xticklabels([x_col])
+                    ax.set_title(f"Violin Plot of {x_col}", fontsize=14, fontweight='bold')
+                    ax.grid(True, alpha=0.2, color=COLORS['border'], axis='y')
+                except Exception:
+                    # Fallback to boxplot if violin plot fails
+                    bp = ax.boxplot([x_data], labels=[x_col], patch_artist=True)
+                    bp['boxes'][0].set_facecolor(COLORS['accent_primary'])
+                    bp['boxes'][0].set_alpha(0.7)
+                    ax.set_title(f"Box Plot of {x_col} (Violin not available)", fontsize=14, fontweight='bold')
+
+            elif "Density" in ptype:
+                if not pd.api.types.is_numeric_dtype(x_data):
+                    x_data = self._safe_convert_to_numeric(x_data).dropna()
+                
+                # Use histogram with density=True as density plot (KDE approximation)
+                # This doesn't require scipy - uses numpy and matplotlib only
+                try:
+                    counts, bins, patches = ax.hist(x_data, bins=50, density=True, 
+                                                   color=COLORS['accent_primary'], 
+                                                   edgecolor=COLORS['bg_card'], 
+                                                   alpha=0.6)
+                    # Add a simple smooth line overlay using numpy convolution for smoothing
+                    bin_centers = (bins[:-1] + bins[1:]) / 2
+                    # Simple moving average for smoothing
+                    if len(counts) > 3:
+                        kernel_size = min(5, len(counts) // 5)
+                        if kernel_size > 1:
+                            kernel = np.ones(kernel_size) / kernel_size
+                            smoothed = np.convolve(counts, kernel, mode='same')
+                            ax.plot(bin_centers, smoothed, color=COLORS['accent_secondary'], 
+                                   linewidth=2, label='Smooth', alpha=0.8)
+                    
+                    ax.set_xlabel(x_col)
+                    ax.set_ylabel("Density")
+                    ax.set_title(f"Density Plot of {x_col}", fontsize=14, fontweight='bold')
+                    ax.grid(True, alpha=0.2, color=COLORS['border'])
+                except Exception as e:
+                    # Fallback to simple histogram
+                    ax.hist(x_data, bins=30, density=True, 
+                           color=COLORS['accent_primary'], edgecolor=COLORS['bg_card'], alpha=0.8)
+                    ax.set_xlabel(x_col)
+                    ax.set_ylabel("Density")
+                    ax.set_title(f"Density Plot of {x_col}", fontsize=14, fontweight='bold')
+                    ax.grid(True, alpha=0.2, color=COLORS['border'])
+
             elif "Heatmap" in ptype:
                 num_cols = self.filtered_df.select_dtypes(include=[np.number]).columns
-                corr = self.filtered_df[num_cols].corr()
-                im = ax.imshow(corr, cmap='RdYlBu_r', aspect='auto')
-                ax.set_xticks(range(len(num_cols)))
-                ax.set_yticks(range(len(num_cols)))
-                ax.set_xticklabels(num_cols, rotation=45, ha='right', fontsize=9)
-                ax.set_yticklabels(num_cols, fontsize=9)
-                self.figure.colorbar(im, ax=ax)
+                if len(num_cols) < 2:
+                    self.show_error("Warning", "Need at least 2 numeric columns for correlation heatmap.")
+                    return
+                
+                # Ensure all are numeric
+                numeric_df = self.filtered_df[num_cols].apply(pd.to_numeric, errors='coerce')
+                corr = numeric_df.corr()
+                
+                # Remove columns/rows with all NaN
+                corr = corr.dropna(axis=0, how='all').dropna(axis=1, how='all')
+                
+                if corr.empty:
+                    self.show_error("Error", "Cannot compute correlation: no valid numeric data.")
+                    return
+                
+                im = ax.imshow(corr.values, cmap='RdYlBu_r', aspect='auto', vmin=-1, vmax=1)
+                ax.set_xticks(range(len(corr.columns)))
+                ax.set_yticks(range(len(corr.columns)))
+                ax.set_xticklabels(corr.columns, rotation=45, ha='right', fontsize=9)
+                ax.set_yticklabels(corr.columns, fontsize=9)
+                
+                # Add correlation values as text
+                for i in range(len(corr.columns)):
+                    for j in range(len(corr.columns)):
+                        text = ax.text(j, i, f'{corr.iloc[i, j]:.2f}',
+                                     ha="center", va="center", color="black", fontsize=8)
+                
+                self.figure.colorbar(im, ax=ax, label='Correlation')
                 ax.set_title("Correlation Heatmap", fontsize=14, fontweight='bold')
 
             self.figure.tight_layout()
             self.canvas.draw()
+            
         except Exception as e:
-            self.show_error("Error", str(e))
+            import traceback
+            error_msg = f"Error generating plot: {str(e)}\n\n{traceback.format_exc()}"
+            self.show_error("Error", error_msg)
 
     def save_plot(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save Plot", "", "PNG (*.png);;PDF (*.pdf)")
@@ -1481,11 +1705,11 @@ class DataAnalysisApp(QMainWindow):
             if "K-Means" in algo:
                 labels = KMeans(k=self.k_spin.value()).fit(X)
             elif "K-Medoids" in algo:
-                labels = KMedoids(k=self.k_spin.value()).fit(X)
+                labels = KMedoids(k=k_value).fit(X)
             elif "AGNES" in algo:
-                labels = AGNES(k=self.k_spin.value(), linkage=self.linkage_combo.currentText()).fit(X)
+                labels = AGNES(k=k_value, linkage=self.linkage_combo.currentText()).fit(X)
             elif "DIANA" in algo:
-                labels = DIANA(k=self.k_spin.value()).fit(X)
+                labels = DIANA(k=k_value).fit(X)
             elif "DBSCAN" in algo:
                 labels = DBSCAN(eps=self.eps_spin.value(), min_samples=self.min_samples_spin.value()).fit(X)
 
