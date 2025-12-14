@@ -317,3 +317,4 @@ uv run python data_analysis_app.py
 
 *Analyse générée le : $(date)*
 *Version du projet : 0.1.0*
+

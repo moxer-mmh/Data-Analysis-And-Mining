@@ -707,13 +707,8 @@ class DataAnalysisApp(QMainWindow):
         
         self.plot_type_combo = QComboBox()
         self.plot_type_combo.addItems([
-            "Histogram", 
             "Scatter Plot", 
             "Box Plot", 
-            "Line Plot", 
-            "Bar Chart",
-            "Violin Plot",
-            "Density Plot",
             "Correlation Heatmap"
         ])
         self.plot_type_combo.currentTextChanged.connect(self.update_plot_controls)
@@ -756,6 +751,8 @@ class DataAnalysisApp(QMainWindow):
 
         layout.addWidget(chart_card)
         self.pages.addWidget(page)
+        # Initialize plot controls to hide Y-axis for single-variable plots
+        self.update_plot_controls()
 
     def create_preprocessing_page(self):
         page = QWidget()
@@ -1114,15 +1111,91 @@ class DataAnalysisApp(QMainWindow):
         metrics_layout = QVBoxLayout(metrics_card)
         metrics_layout.setContentsMargins(20, 20, 20, 20)
 
-        metrics_title = QLabel("📊  Model Metrics")
+        metrics_title = QLabel("Model Metrics")
         metrics_title.setStyleSheet(f"font-size: 16px; font-weight: 600; color: {COLORS['text_primary']}; margin-bottom: 12px;")
         metrics_layout.addWidget(metrics_title)
 
-        self.class_results_text = QTextEdit()
-        self.class_results_text.setReadOnly(True)
-        self.class_results_text.setPlaceholderText("Train a model to see results...")
-        self.class_results_text.setMaximumHeight(200)
-        metrics_layout.addWidget(self.class_results_text)
+        # Model name label
+        self.model_name_label = QLabel("")
+        self.model_name_label.setStyleSheet(f"font-size: 14px; font-weight: 500; color: {COLORS['accent_secondary']}; margin-bottom: 16px;")
+        metrics_layout.addWidget(self.model_name_label)
+
+        # Metrics grid with labels
+        metrics_grid = QGridLayout()
+        metrics_grid.setSpacing(16)
+        
+        # Accuracy metric with explanation
+        accuracy_container = QWidget()
+        accuracy_layout = QVBoxLayout(accuracy_container)
+        accuracy_layout.setContentsMargins(0, 0, 0, 0)
+        accuracy_layout.setSpacing(4)
+        self.accuracy_card = StatCard("Accuracy", "—", "", COLORS['accent_primary'])
+        accuracy_label = QLabel("Proportion of correct predictions")
+        accuracy_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px; font-style: italic;")
+        accuracy_label.setWordWrap(True)
+        accuracy_layout.addWidget(self.accuracy_card)
+        accuracy_layout.addWidget(accuracy_label)
+        metrics_grid.addWidget(accuracy_container, 0, 0)
+        
+        # Precision metric with explanation
+        precision_container = QWidget()
+        precision_layout = QVBoxLayout(precision_container)
+        precision_layout.setContentsMargins(0, 0, 0, 0)
+        precision_layout.setSpacing(4)
+        self.precision_card = StatCard("Precision", "—", "", COLORS['accent_secondary'])
+        precision_label = QLabel("Proportion of positive predictions that are correct")
+        precision_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px; font-style: italic;")
+        precision_label.setWordWrap(True)
+        precision_layout.addWidget(self.precision_card)
+        precision_layout.addWidget(precision_label)
+        metrics_grid.addWidget(precision_container, 0, 1)
+        
+        # Recall metric with explanation
+        recall_container = QWidget()
+        recall_layout = QVBoxLayout(recall_container)
+        recall_layout.setContentsMargins(0, 0, 0, 0)
+        recall_layout.setSpacing(4)
+        self.recall_card = StatCard("Recall", "—", "", COLORS['accent_success'])
+        recall_label = QLabel("Proportion of actual positives correctly identified")
+        recall_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px; font-style: italic;")
+        recall_label.setWordWrap(True)
+        recall_layout.addWidget(self.recall_card)
+        recall_layout.addWidget(recall_label)
+        metrics_grid.addWidget(recall_container, 1, 0)
+        
+        # F1 Score metric with explanation
+        f1_container = QWidget()
+        f1_layout = QVBoxLayout(f1_container)
+        f1_layout.setContentsMargins(0, 0, 0, 0)
+        f1_layout.setSpacing(4)
+        self.f1_card = StatCard("F1 Score", "—", "", COLORS['accent_warning'])
+        f1_label = QLabel("Harmonic mean of precision and recall")
+        f1_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px; font-style: italic;")
+        f1_label.setWordWrap(True)
+        f1_layout.addWidget(self.f1_card)
+        f1_layout.addWidget(f1_label)
+        metrics_grid.addWidget(f1_container, 1, 1)
+        
+        metrics_layout.addLayout(metrics_grid)
+        
+        # Placeholder label
+        self.class_results_placeholder = QLabel("Train a model to see results...")
+        self.class_results_placeholder.setStyleSheet(f"color: {COLORS['text_muted']}; font-style: italic; margin-top: 16px;")
+        self.class_results_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        metrics_layout.addWidget(self.class_results_placeholder)
+        
+        # Hide metric cards initially
+        accuracy_container.hide()
+        precision_container.hide()
+        recall_container.hide()
+        f1_container.hide()
+        self.model_name_label.hide()
+        
+        # Store containers for show/hide
+        self.accuracy_container = accuracy_container
+        self.precision_container = precision_container
+        self.recall_container = recall_container
+        self.f1_container = f1_container
 
         results_layout.addWidget(metrics_card)
 
@@ -1276,22 +1349,16 @@ class DataAnalysisApp(QMainWindow):
         data = self.filtered_df[col].dropna()
 
         text = f"""╔══════════════════════════════════════════════════╗
-║  📊  STATISTICS FOR: {col[:30]:<28} ║
+║  STATISTICS FOR: {col[:32]:<30} ║
 ╠══════════════════════════════════════════════════╣
 ║                                                  ║
-║  Count       │  {len(data):<32,} ║
 ║  Mean        │  {data.mean():<32.4f} ║
 ║  Median      │  {data.median():<32.4f} ║
-║  Std Dev     │  {data.std():<32.4f} ║
-║  Variance    │  {data.var():<32.4f} ║
+║  Q1 (25%)    │  {data.quantile(0.25):<32.4f} ║
+║  Q2 (50%)    │  {data.quantile(0.50):<32.4f} ║
+║  Q3 (75%)    │  {data.quantile(0.75):<32.4f} ║
 ║  Min         │  {data.min():<32.4f} ║
 ║  Max         │  {data.max():<32.4f} ║
-║  Range       │  {(data.max() - data.min()):<32.4f} ║
-║  Q1 (25%)    │  {data.quantile(0.25):<32.4f} ║
-║  Q3 (75%)    │  {data.quantile(0.75):<32.4f} ║
-║  IQR         │  {(data.quantile(0.75) - data.quantile(0.25)):<32.4f} ║
-║  Skewness    │  {data.skew():<32.4f} ║
-║  Kurtosis    │  {data.kurtosis():<32.4f} ║
 ║                                                  ║
 ╚══════════════════════════════════════════════════╝"""
         self.stats_text.setText(text)
@@ -1316,9 +1383,11 @@ class DataAnalysisApp(QMainWindow):
     def update_plot_controls(self):
         ptype = self.plot_type_combo.currentText()
         needs_y = "Scatter" in ptype or "Line" in ptype or "Bar" in ptype
-        self.y_column_combo.setEnabled(needs_y)
-        self.y_label.setVisible(needs_y)
-        self.y_column_combo.setVisible(needs_y or "Heatmap" not in ptype or "Density" not in ptype)
+        # Box Plot, Histogram, Density Plot, Violin Plot, and Heatmap only need X axis
+        single_var_only = "Box" in ptype or "Histogram" in ptype or "Density" in ptype or "Violin" in ptype or "Heatmap" in ptype
+        self.y_column_combo.setEnabled(needs_y and not single_var_only)
+        self.y_label.setVisible(needs_y and not single_var_only)
+        self.y_column_combo.setVisible(needs_y and not single_var_only)
 
     def _safe_convert_to_numeric(self, series):
         """Safely convert a pandas series to numeric, handling errors"""
@@ -1961,25 +2030,25 @@ class DataAnalysisApp(QMainWindow):
         prec = precision_score(y_true, y_pred)
         rec = recall_score(y_true, y_pred)
         f1 = f1_score(y_true, y_pred)
-        cm, classes = confusion_matrix(y_true, y_pred)
 
-        text = f"""╔══════════════════════════════════════════════════╗
-║  🤖  MODEL: {title[:38]:<38} ║
-╠══════════════════════════════════════════════════╣
-║                                                  ║
-║  ▸ Accuracy     │  {acc:<30.4f} ║
-║  ▸ Precision    │  {prec:<30.4f} ║
-║  ▸ Recall       │  {rec:<30.4f} ║
-║  ▸ F1 Score     │  {f1:<30.4f} ║
-║                                                  ║
-╠══════════════════════════════════════════════════╣
-║  CONFUSION MATRIX                                ║
-║  Classes: {str(classes):<40} ║
-╚══════════════════════════════════════════════════╝
-
-{np.array2string(cm, separator='  ')}"""
-
-        self.class_results_text.setText(text)
+        # Hide placeholder
+        self.class_results_placeholder.hide()
+        
+        # Show model name
+        self.model_name_label.setText(f"Model: {title}")
+        self.model_name_label.show()
+        
+        # Update metric cards
+        self.accuracy_card.set_value(f"{acc:.4f}")
+        self.precision_card.set_value(f"{prec:.4f}")
+        self.recall_card.set_value(f"{rec:.4f}")
+        self.f1_card.set_value(f"{f1:.4f}")
+        
+        # Show metric containers
+        self.accuracy_container.show()
+        self.precision_container.show()
+        self.recall_container.show()
+        self.f1_container.show()
 
     def run_knn_optimization(self, X_train, X_test, y_train, y_test):
         precisions = []
