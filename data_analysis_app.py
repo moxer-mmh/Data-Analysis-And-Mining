@@ -1687,6 +1687,139 @@ class DataAnalysisApp(QMainWindow):
             except Exception as e:
                 self.show_error("Error", f"Export failed: {str(e)}")
 
+    def find_elbow_point(self, inertias):
+        """Find the elbow point using the elbow detection algorithm"""
+        if len(inertias) < 3:
+            return len(inertias) - 1 if len(inertias) > 0 else 0
+        
+        # Convert to numpy array for easier manipulation
+        ks = np.array(range(1, len(inertias) + 1))
+        inertias = np.array(inertias)
+        
+        # Calculate the rate of change (first derivative)
+        # Using normalized values for better detection
+        normalized_inertias = (inertias - inertias.min()) / (inertias.max() - inertias.min() + 1e-10)
+        normalized_ks = (ks - ks.min()) / (ks.max() - ks.min() + 1e-10)
+        
+        # Calculate distances from each point to the line connecting first and last point
+        # The elbow is the point with maximum distance
+        first_point = np.array([normalized_ks[0], normalized_inertias[0]])
+        last_point = np.array([normalized_ks[-1], normalized_inertias[-1]])
+        
+        max_dist = -1
+        elbow_idx = len(inertias) // 2  # Default to middle
+        
+        for i in range(1, len(inertias) - 1):
+            point = np.array([normalized_ks[i], normalized_inertias[i]])
+            # Distance from point to line segment
+            vec = last_point - first_point
+            vec_norm = vec / (np.linalg.norm(vec) + 1e-10)
+            point_vec = point - first_point
+            proj = np.dot(point_vec, vec_norm) * vec_norm
+            dist_vec = point_vec - proj
+            dist = np.linalg.norm(dist_vec)
+            
+            if dist > max_dist:
+                max_dist = dist
+                elbow_idx = i
+        
+        return elbow_idx
+
+    def run_elbow_method(self):
+        """Run Elbow Method to find optimal k for K-Means"""
+        if self.filtered_df is None:
+            self.show_error("Warning", "No data loaded. Please load a dataset first.")
+            return
+        
+        items = self.cluster_feature_list.selectedItems()
+        feats = [i.text() for i in items]
+
+        if len(feats) < 2:
+            self.show_error("Warning", "Select at least 2 features")
+            return
+
+        try:
+            X = self.filtered_df[feats].dropna().values
+            
+            if len(X) < 10:
+                self.show_error("Warning", "Need at least 10 data points for elbow method")
+                return
+
+            # Calculate inertias for k from 1 to min(10, n_samples-1)
+            max_k = min(10, len(X) - 1)
+            if max_k < 2:
+                self.show_error("Warning", "Not enough data points for elbow method")
+                return
+
+            inertias = []
+            ks = list(range(1, max_k + 1))
+
+            # Show progress
+            self.show_toast("Calculating", f"Running Elbow Method for k=1 to {max_k}...")
+
+            for k in ks:
+                try:
+                    kmeans = KMeans(k=k, max_iters=100)
+                    kmeans.fit(X)
+                    inertia = kmeans.inertia_(X)
+                    inertias.append(inertia)
+                except Exception as e:
+                    self.show_error("Error", f"Failed for k={k}: {str(e)}")
+                    return
+
+            if len(inertias) == 0:
+                self.show_error("Error", "Failed to calculate inertias")
+                return
+
+            # Find elbow point
+            elbow_idx = self.find_elbow_point(inertias)
+            optimal_k = ks[elbow_idx]
+
+            # Visualize elbow method
+            self.cluster_figure.clear()
+            ax = self.cluster_figure.add_subplot(111)
+
+            # Style
+            ax.set_facecolor(COLORS['bg_elevated'])
+            self.cluster_figure.patch.set_facecolor(COLORS['bg_card'])
+            ax.tick_params(colors=COLORS['text_secondary'])
+            for spine in ax.spines.values():
+                spine.set_color(COLORS['border'])
+            ax.xaxis.label.set_color(COLORS['text_secondary'])
+            ax.yaxis.label.set_color(COLORS['text_secondary'])
+            ax.title.set_color(COLORS['text_primary'])
+
+            # Plot elbow curve
+            ax.plot(ks, inertias, marker='o', color=COLORS['accent_primary'], 
+                   linewidth=2, markersize=8, label='Inertia')
+            
+            # Highlight elbow point
+            ax.plot(optimal_k, inertias[elbow_idx], marker='*', 
+                   color=COLORS['accent_warning'], markersize=20, 
+                   label=f'Optimal k={optimal_k}', zorder=5)
+            ax.axvline(x=optimal_k, color=COLORS['accent_warning'], 
+                      linestyle='--', alpha=0.5, linewidth=2)
+
+            ax.set_xlabel('Number of Clusters (k)', fontsize=12)
+            ax.set_ylabel('Within-Cluster Sum of Squares (WCSS)', fontsize=12)
+            ax.set_title(f'Elbow Method - Optimal k = {optimal_k}', 
+                        fontsize=14, fontweight='bold')
+            ax.set_xticks(ks)
+            ax.grid(True, alpha=0.2, color=COLORS['border'])
+            ax.legend(loc='upper right')
+
+            self.cluster_figure.tight_layout()
+            self.cluster_canvas.draw()
+
+            # Update k spinbox with optimal value
+            self.k_spin.setValue(optimal_k)
+            self.show_toast("Complete", f"Optimal k = {optimal_k} (Elbow point detected)")
+
+        except Exception as e:
+            import traceback
+            error_msg = f"Elbow method failed: {str(e)}\n\n{traceback.format_exc()}"
+            self.show_error("Error", error_msg)
+
     def run_clustering(self):
         if self.filtered_df is None:
             return
@@ -1701,9 +1834,30 @@ class DataAnalysisApp(QMainWindow):
             X = self.filtered_df[feats].dropna().values
             algo = self.cluster_algo_combo.currentText()
 
+            # Use optimal k from elbow method if checkbox is checked and algorithm is K-Means
+            k_value = self.k_spin.value()
+            if "K-Means" in algo and self.elbow_checkbox.isChecked():
+                # Run elbow method to get optimal k
+                try:
+                    max_k = min(10, len(X) - 1)
+                    if max_k >= 2:
+                        inertias = []
+                        for k in range(1, max_k + 1):
+                            kmeans = KMeans(k=k, max_iters=100)
+                            kmeans.fit(X)
+                            inertia = kmeans.inertia_(X)
+                            inertias.append(inertia)
+                        
+                        elbow_idx = self.find_elbow_point(inertias)
+                        k_value = elbow_idx + 1
+                        self.k_spin.setValue(k_value)
+                except Exception:
+                    # If elbow method fails, use the current k value
+                    pass
+
             labels = None
             if "K-Means" in algo:
-                labels = KMeans(k=self.k_spin.value()).fit(X)
+                labels = KMeans(k=k_value).fit(X)
             elif "K-Medoids" in algo:
                 labels = KMedoids(k=k_value).fit(X)
             elif "AGNES" in algo:
